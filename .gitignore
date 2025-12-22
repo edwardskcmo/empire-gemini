@@ -1,0 +1,17 @@
+# Dependencies - Don't upload these, Heroku builds them fresh
+node_modules/
+
+# Database - Don't upload your local SQLite files
+*.sqlite
+*.db
+empire.sqlite
+empire.db
+
+# Environment Variables - Protect your Gemini API Key
+.env
+
+# Production - We want Heroku to see the 'dist' folder, so we keep this clear
+# dist/
+
+# System files
+.DS_Store
