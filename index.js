@@ -3,79 +3,54 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const fs = require('fs').promises;
 const fsSync = require('fs');
 const path = require('path');
 const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require('@google/generative-ai');
 const { sequelize, ChatMessage, Issue, DataSource } = require('./models');
-const multer = require('multer');
-const pdf = require('pdf-parse');
-const axios = require('axios');
 
-// --- Configuration ---
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 
-// Paths for uploads
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fsSync.existsSync(uploadDir)) {
-    fsSync.mkdirSync(uploadDir, { recursive: true });
-}
+// Setup Socket.io
+const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
 
-// Socket.io Setup
-const io = new Server(server, {
-    cors: { origin: "*", methods: ["GET", "POST"] }
-});
-
-// Gemini AI Setup
+// Setup Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash-exp",
-    safetySettings: [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-    ],
-});
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
-// --- Middleware ---
 app.use(cors());
 app.use(express.json());
 
-// --- SERVE FRONTEND FILES (The Fix for "Cannot GET /") ---
-// This tells the server to look in the 'dist' folder for the Dashboard files
-app.use(express.static(path.join(__dirname, 'dist')));
+// --- FRONTEND SERVING LOGIC ---
+// We check for 'dist' first (standard Vite), then 'public' as a backup
+const frontendPath = fsSync.existsSync(path.join(__dirname, 'dist')) 
+    ? path.join(__dirname, 'dist') 
+    : __dirname;
 
-// --- API Routes ---
-app.get('/api/pulse', (req, res) => res.json({ status: "Online", detail: "Empire Engine Active" }));
+app.use(express.static(frontendPath));
 
-app.get('/api/issues', async (req, res) => {
-    try {
-        const issues = await Issue.findAll({ order: [['createdAt', 'DESC']] });
-        res.json(issues);
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+// --- API ROUTES ---
+app.get('/api/pulse', (req, res) => res.json({ status: "Online" }));
 
 app.post('/api/chat', async (req, res) => {
-    const { message } = req.body;
     try {
-        const result = await model.generateContent(message);
-        const responseText = result.response.text();
-        res.json({ role: 'ai', text: responseText });
-    } catch (error) { res.json({ text: "AI Error: " + error.message }); }
+        const result = await model.generateContent(req.body.message);
+        res.json({ role: 'ai', text: result.response.text() });
+    } catch (e) { res.json({ text: "AI Error: " + e.message }); }
 });
 
-// --- CATCH-ALL ROUTE ---
-// If the user isn't hitting an API route, show them the React Dashboard
+// --- THE "CATCH-ALL" ---
+// This ensures that hitting the URL always serves your index.html
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    const indexPath = path.join(frontendPath, 'index.html');
+    if (fsSync.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.status(404).send("Empire AI: index.html not found. Check your build scripts.");
+    }
 });
 
-// --- Database & Server Start ---
 sequelize.sync({ alter: true }).then(() => {
-    server.listen(PORT, () => {
-        console.log(`Empire AI Dashboard live on port ${PORT}`);
-    });
-}).catch(err => {
-    console.error('Database Sync Failed:', err);
+    server.listen(PORT, () => console.log(`Empire AI Live on ${PORT}`));
 });
