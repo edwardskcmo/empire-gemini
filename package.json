@@ -1,9 +1,10 @@
 {
-  "name": "server",
+  "name": "empire-ai-dashboard",
   "version": "1.0.0",
-  "description": "",
+  "description": "Empire AI Operational Intelligence Tool",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -16,10 +17,11 @@
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "multer": "^2.0.2",
-    "nodemon": "^3.1.11",
     "pdf-parse": "^1.1.1",
     "sequelize": "^6.37.7",
     "socket.io": "^4.8.1",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "pg": "^8.11.3",
+    "pg-hstore": "^2.3.4"
   }
 }
