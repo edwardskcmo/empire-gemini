@@ -12,42 +12,41 @@ const multer = require('multer');
 const pdf = require('pdf-parse');
 const axios = require('axios');
 
-// Configure Paths (Flattened for your GitHub structure)
+// --- Configuration ---
+const app = express();
+const server = http.createServer(app);
+const PORT = process.env.PORT || 3001;
+
+// Paths for uploads
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fsSync.existsSync(uploadDir)) {
     fsSync.mkdirSync(uploadDir, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir),
-    filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
-});
-const upload = multer({ storage: storage });
-
-const app = express();
-const server = http.createServer(app);
+// Socket.io Setup
 const io = new Server(server, {
     cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-// CRITICAL FIX: Heroku Port
-const PORT = process.env.PORT || 3001;
-
+// Gemini AI Setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({
     model: "gemini-2.0-flash-exp",
     safetySettings: [
         { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
         { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
     ],
 });
 
+// --- Middleware ---
 app.use(cors());
 app.use(express.json());
 
-// --- Simple API Routes ---
+// --- SERVE FRONTEND FILES (The Fix for "Cannot GET /") ---
+// This tells the server to look in the 'dist' folder for the Dashboard files
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// --- API Routes ---
 app.get('/api/pulse', (req, res) => res.json({ status: "Online", detail: "Empire Engine Active" }));
 
 app.get('/api/issues', async (req, res) => {
@@ -66,7 +65,17 @@ app.post('/api/chat', async (req, res) => {
     } catch (error) { res.json({ text: "AI Error: " + error.message }); }
 });
 
-// Database Sync & Start
+// --- CATCH-ALL ROUTE ---
+// If the user isn't hitting an API route, show them the React Dashboard
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
+// --- Database & Server Start ---
 sequelize.sync({ alter: true }).then(() => {
-    server.listen(PORT, () => console.log(`Dashboard running on port ${PORT}`));
-}).catch(err => console.error('DB Sync Fail:', err));
+    server.listen(PORT, () => {
+        console.log(`Empire AI Dashboard live on port ${PORT}`);
+    });
+}).catch(err => {
+    console.error('Database Sync Failed:', err);
+});
