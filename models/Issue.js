@@ -1,4 +1,4 @@
-module.exports = (sequelize, DataTypes) => {
+export default (sequelize, DataTypes) => {
     const Issue = sequelize.define('Issue', {
         description: {
             type: DataTypes.TEXT,
@@ -23,3 +23,4 @@ module.exports = (sequelize, DataTypes) => {
     });
     return Issue;
 };
+
