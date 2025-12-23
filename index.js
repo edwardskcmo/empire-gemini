@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import fetch from 'node-fetch'; // Required for ElevenLabs calls
+import fetch from 'node-fetch';
 
 dotenv.config();
 
@@ -16,7 +16,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const httpServer = createServer(app);
 
-// Socket.io Setup with CORS for Local & Production
 const io = new Server(httpServer, {
     cors: {
         origin: "*",
@@ -35,7 +34,7 @@ const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 app.post('/api/voice/speech', async (req, res) => {
     const { text } = req.body;
     const ELEVEN_LABS_API_KEY = process.env.ELEVEN_LABS_API_KEY;
-    const VOICE_ID = process.env.ELEVEN_LABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM'; // Default voice
+    const VOICE_ID = process.env.ELEVEN_LABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
 
     try {
         const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
@@ -58,7 +57,6 @@ app.post('/api/voice/speech', async (req, res) => {
         const audioBuffer = await response.arrayBuffer();
         res.set('Content-Type', 'audio/mpeg');
         res.send(Buffer.from(audioBuffer));
-
     } catch (error) {
         console.error("Voice Error:", error);
         res.status(500).json({ error: "Failed to generate speech" });
@@ -73,19 +71,14 @@ io.on('connection', (socket) => {
         console.log('Voice session requested');
     });
 
-    // Handle incoming chat/voice text
     socket.on('chat-message', async (message) => {
         try {
             const chat = model.startChat({ history: [] });
             const result = await chat.sendMessage(message);
             const responseText = result.response.text();
 
-            // Send back the text for the chat window
             socket.emit('chat-response', { text: responseText });
-
-            // Trigger the VoiceOrb to speak
             socket.emit('voice-response', { text: responseText });
-
         } catch (error) {
             console.error("AI Error:", error);
             socket.emit('chat-response', { error: "Brain connection lost." });
