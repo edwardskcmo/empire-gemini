@@ -2,10 +2,10 @@
   "name": "empire-ai-dashboard",
   "version": "1.0.0",
   "description": "Empire AI Operational Intelligence Tool",
-  "main": "index.js",
+  "main": "server/index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
+    "start": "node server/index.js",
     "build": "vite build",
     "heroku-postbuild": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -25,6 +25,7 @@
     "express": "^5.2.1",
     "lucide-react": "^0.468.0",
     "multer": "^2.0.2",
+    "node-fetch": "^3.3.2",
     "pdf-parse": "^1.1.1",
     "postcss": "^8.4.31",
     "prop-types": "^15.8.1",
