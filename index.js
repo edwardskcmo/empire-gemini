@@ -6,15 +6,18 @@ import cors from 'cors';
 import fsSync from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { sequelize, ChatMessage, Issue, DataSource } from './models/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
+
 const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
@@ -30,7 +33,9 @@ app.post('/api/chat', async (req, res) => {
     try {
         const result = await model.generateContent(req.body.message);
         res.json({ role: 'ai', text: result.response.text() });
-    } catch (e) { res.json({ text: "AI Error: " + e.message }); }
+    } catch (e) {
+        res.json({ text: "AI Error: " + e.message });
+    }
 });
 
 app.get('*', (req, res) => {
@@ -44,5 +49,4 @@ app.get('*', (req, res) => {
 
 sequelize.sync({ alter: true }).then(() => {
     server.listen(PORT, () => console.log(`Empire AI Engine Running on ${PORT}`));
-});;
-
+});
