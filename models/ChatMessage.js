@@ -1,4 +1,4 @@
-module.exports = (sequelize, DataTypes) => {
+export default (sequelize, DataTypes) => {
     const ChatMessage = sequelize.define('ChatMessage', {
         role: {
             type: DataTypes.STRING,
