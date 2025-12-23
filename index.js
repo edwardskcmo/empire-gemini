@@ -17,25 +17,31 @@ const app = express();
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
-    cors: { origin: "*", methods: ["GET", "POST"] }
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
 });
 
 app.use(cors());
 app.use(express.json());
 
-// --- BRAIN: GEMINI SETUP ---
+// --- GEMINI AI SETUP ---
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-// --- VOICE: ELEVENLABS ENDPOINT ---
+// --- ELEVENLABS VOICE ENDPOINT ---
 app.post('/api/voice/speech', async (req, res) => {
+    const { text } = req.body;
+    const ELEVEN_LABS_API_KEY = process.env.ELEVEN_LABS_API_KEY;
+    const VOICE_ID = process.env.ELEVEN_LABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
+
     try {
-        const { text } = req.body;
-        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${process.env.ELEVEN_LABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM'}`, {
+        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'xi-api-key': process.env.ELEVEN_LABS_API_KEY,
+                'xi-api-key': ELEVEN_LABS_API_KEY,
             },
             body: JSON.stringify({
                 text: text,
@@ -44,18 +50,20 @@ app.post('/api/voice/speech', async (req, res) => {
             })
         });
 
-        if (!response.ok) throw new Error('ElevenLabs Error');
+        if (!response.ok) throw new Error('ElevenLabs API error');
+
         const audioBuffer = await response.arrayBuffer();
         res.set('Content-Type', 'audio/mpeg');
         res.send(Buffer.from(audioBuffer));
     } catch (error) {
         console.error("Voice Error:", error);
-        res.status(500).send("Voice Failed");
+        res.status(500).json({ error: "Failed to generate speech" });
     }
 });
 
-// --- INTERACTION: SOCKET LOGIC ---
+// --- SOCKET.IO ---
 io.on('connection', (socket) => {
+    console.log('Client connected');
     socket.on('chat-message', async (message) => {
         try {
             const chat = model.startChat({ history: [] });
@@ -63,15 +71,16 @@ io.on('connection', (socket) => {
             const responseText = result.response.text();
             socket.emit('chat-response', { text: responseText });
             socket.emit('voice-response', { text: responseText });
-        } catch (err) {
-            socket.emit('chat-response', { text: "Brain Error." });
+        } catch (error) {
+            socket.emit('chat-response', { error: "Brain connection lost." });
         }
     });
 });
 
-// --- DEPLOYMENT: PATH FIX ---
-// This looks for the 'dist' folder created by Vite
-const distPath = path.join(__dirname, '../dist');
+// --- DEPLOYMENT ROUTING (CRITICAL FIX) ---
+const distPath = path.resolve(__dirname, '..', 'dist');
+console.log("Serving static files from:", distPath);
+
 app.use(express.static(distPath));
 
 app.get('*', (req, res) => {
@@ -80,5 +89,5 @@ app.get('*', (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
-    console.log(`Empire AI active on port ${PORT}`);
+    console.log(`Empire AI Server running on port ${PORT}`);
 });
