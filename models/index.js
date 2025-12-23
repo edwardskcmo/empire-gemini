@@ -3,13 +3,10 @@ import ChatMessageModel from './ChatMessage.js';
 import DataSourceModel from './DataSource.js';
 import IssueModel from './Issue.js';
 
-let sequelize;
-// ... rest of file
-
-let sequelize;
+let dbConnection;
 
 if (process.env.DATABASE_URL) {
-  sequelize = new Sequelize(process.env.DATABASE_URL, {
+  dbConnection = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
     protocol: 'postgres',
     dialectOptions: {
@@ -20,16 +17,14 @@ if (process.env.DATABASE_URL) {
     }
   });
 } else {
-  sequelize = new Sequelize({
+  dbConnection = new Sequelize({
     dialect: 'sqlite',
     storage: './empire.sqlite'
   });
 }
 
-const ChatMessage = ChatMessageModel(sequelize, DataTypes);
-const DataSource = DataSourceModel(sequelize, DataTypes);
-const Issue = IssueModel(sequelize, DataTypes);
+const ChatMessage = ChatMessageModel(dbConnection, DataTypes);
+const DataSource = DataSourceModel(dbConnection, DataTypes);
+const Issue = IssueModel(dbConnection, DataTypes);
 
-export { sequelize, ChatMessage, DataSource, Issue };
-
-
+export { dbConnection as sequelize, ChatMessage, DataSource, Issue };
