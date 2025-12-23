@@ -1,8 +1,10 @@
-const { Sequelize, DataTypes } = require('sequelize');
+import { Sequelize, DataTypes } from 'sequelize';
+import ChatMessageModel from './ChatMessage.js';
+import DataSourceModel from './DataSource.js';
+import IssueModel from './Issue.js';
 
 let sequelize;
 
-// If we are on Heroku, use the Postgres URL provided by the add-on
 if (process.env.DATABASE_URL) {
   sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
@@ -10,26 +12,19 @@ if (process.env.DATABASE_URL) {
     dialectOptions: {
       ssl: {
         require: true,
-        rejectUnauthorized: false // This is the 'Secret Sauce' for Heroku Postgres
+        rejectUnauthorized: false
       }
     }
   });
 } else {
-  // If we are on your local computer, use the SQLite file
   sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: './empire.sqlite'
   });
 }
 
-// Pass the connection to each model
-const ChatMessage = require('./ChatMessage')(sequelize, DataTypes);
-const DataSource = require('./DataSource')(sequelize, DataTypes);
-const Issue = require('./Issue')(sequelize, DataTypes);
+const ChatMessage = ChatMessageModel(sequelize, DataTypes);
+const DataSource = DataSourceModel(sequelize, DataTypes);
+const Issue = IssueModel(sequelize, DataTypes);
 
-module.exports = {
-  sequelize,
-  ChatMessage,
-  DataSource,
-  Issue
-};
+export { sequelize, ChatMessage, DataSource, Issue };
