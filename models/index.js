@@ -1,4 +1,4 @@
-import { Sequelize, DataTypes } from 'sequelize';
+export default (sequelize, DataTypes) => {
 import ChatMessageModel from './ChatMessage.js';
 import DataSourceModel from './DataSource.js';
 import IssueModel from './Issue.js';
@@ -28,3 +28,4 @@ const DataSource = DataSourceModel(sequelize, DataTypes);
 const Issue = IssueModel(sequelize, DataTypes);
 
 export { sequelize, ChatMessage, DataSource, Issue };
+
