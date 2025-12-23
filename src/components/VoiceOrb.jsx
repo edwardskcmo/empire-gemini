@@ -1,5 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 
+// Smart Path Logic: Determines if we are on Heroku or Localhost
+const getApiBaseUrl = () => {
+    return window.location.hostname === 'localhost' 
+        ? 'http://localhost:3001' 
+        : window.location.origin;
+};
+
 const VoiceOrb = ({ socket, isActive, volume = 0 }) => {
     const [phase, setPhase] = useState(0);
     const [localProcessing, setLocalProcessing] = useState(false);
@@ -12,19 +19,15 @@ const VoiceOrb = ({ socket, isActive, volume = 0 }) => {
 
         const handleVoiceResponse = (data) => {
             setLocalProcessing(false);
-
             if (data.text) {
-                // Speak the text response
                 speakText(data.text);
             }
-
             if (data.error) {
                 setHasError(true);
             }
         };
 
         const handleAudioChunk = (data) => {
-            // Unused in Text-Only mode, but kept for future fallback
             setLocalProcessing(false);
         };
 
@@ -37,14 +40,9 @@ const VoiceOrb = ({ socket, isActive, volume = 0 }) => {
         };
     }, [socket]);
 
-    // Handle "Listening" -> "Processing" transition
-    // Since App.jsx passes isActive=true only when listening, 
-    // when isActive becomes false, we assume we entered processing state 
-    // IF we were just listening.
     const prevActiveRef = useRef(isActive);
     useEffect(() => {
         if (prevActiveRef.current && !isActive) {
-            // Just stopped listening
             setLocalProcessing(true);
             setHasError(false);
         }
@@ -53,20 +51,21 @@ const VoiceOrb = ({ socket, isActive, volume = 0 }) => {
 
     const currentAudioRef = useRef(null);
 
-    // Backend TTS (ElevenLabs)
+    // Updated Speak function using the Smart Path
     const speakText = async (text) => {
         if (!text) return;
 
-        // Stop any currently playing audio
         if (currentAudioRef.current) {
             currentAudioRef.current.pause();
             currentAudioRef.current = null;
         }
 
         try {
-            setLocalProcessing(true); // Show processing while fetching audio
+            setLocalProcessing(true); 
 
-            const response = await fetch('http://localhost:3001/api/voice/speech', {
+            // SMART PATH APPLIED HERE
+            const baseUrl = getApiBaseUrl();
+            const response = await fetch(`${baseUrl}/api/voice/speech`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text })
@@ -107,14 +106,11 @@ const VoiceOrb = ({ socket, isActive, volume = 0 }) => {
             console.error("Speech Generation failed:", error);
             setHasError(true);
             setLocalProcessing(false);
-            // Fallback to browser TTS if backend fails?
-            // Optional: window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
         }
     };
 
     // Animation Loop
     useEffect(() => {
-        // Idle breathing vs Active/Speaking
         const fast = isActive || isSpeaking || localProcessing;
         const interval = setInterval(() => {
             setPhase(p => (p + (fast ? 0.2 : 0.05)) % (2 * Math.PI));
@@ -122,26 +118,24 @@ const VoiceOrb = ({ socket, isActive, volume = 0 }) => {
         return () => clearInterval(interval);
     }, [isActive, isSpeaking, localProcessing]);
 
-    // Visual State Calculation
     const currentScale = (isActive || isSpeaking)
         ? 1 + Math.min(volume + 0.2, 1) * 0.5
         : (localProcessing ? 1.2 : 1 + Math.sin(phase) * 0.05);
 
-    // Color Logic
-    let baseColor = '#4169E1'; // Default Blue
+    let baseColor = '#4169E1'; 
     let glowColor = 'rgba(100, 149, 237, 0.4)';
 
     if (hasError) {
         baseColor = '#FF0000';
         glowColor = 'rgba(255, 0, 0, 0.8)';
     } else if (isActive) {
-        baseColor = '#00FFFF'; // Cyan Listening
+        baseColor = '#00FFFF'; 
         glowColor = 'rgba(64, 224, 208, 0.8)';
     } else if (localProcessing) {
-        baseColor = '#FFD700'; // Gold Processing
+        baseColor = '#FFD700'; 
         glowColor = 'rgba(255, 215, 0, 0.6)';
     } else if (isSpeaking) {
-        baseColor = '#00FF7F'; // Green Speaking
+        baseColor = '#00FF7F'; 
         glowColor = 'rgba(0, 255, 127, 0.6)';
     }
 
@@ -150,7 +144,6 @@ const VoiceOrb = ({ socket, isActive, volume = 0 }) => {
             onClick={() => {
                 if (socket) {
                     socket.emit('start-voice-session');
-                    // Cancel any ongoing speech
                     if (currentAudioRef.current) {
                         currentAudioRef.current.pause();
                         currentAudioRef.current = null;
@@ -169,7 +162,6 @@ const VoiceOrb = ({ socket, isActive, volume = 0 }) => {
                 transition: 'all 0.3s ease'
             }}
         >
-            {/* Glow Ring */}
             <div style={{
                 position: 'absolute',
                 width: '100%',
@@ -182,7 +174,6 @@ const VoiceOrb = ({ socket, isActive, volume = 0 }) => {
                 opacity: 0.6
             }} />
 
-            {/* Core Orb */}
             <div style={{
                 position: 'relative',
                 width: '60px',
@@ -195,7 +186,6 @@ const VoiceOrb = ({ socket, isActive, volume = 0 }) => {
                 zIndex: 2
             }} />
 
-            {/* Ripple Animation */}
             {(isActive || isSpeaking || localProcessing) && !hasError && (
                 <div style={{
                     position: 'absolute',
@@ -208,7 +198,6 @@ const VoiceOrb = ({ socket, isActive, volume = 0 }) => {
                 }} />
             )}
 
-            {/* Status Label (Optional) */}
             <div style={{
                 position: 'absolute',
                 bottom: '-40px',
