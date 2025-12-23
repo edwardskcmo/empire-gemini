@@ -9,14 +9,11 @@ import { fileURLToPath } from 'url';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import { sequelize, ChatMessage, Issue, DataSource } from './models/index.js';
 
-// Modern path handling for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
-
 const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
