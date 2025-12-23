@@ -1,8 +1,19 @@
 import React from 'react';
-import { LayoutDashboard, Zap, Mic, Square, AlertCircle, MessageSquare, Send, Link as LinkIcon, FileText, FileSpreadsheet, Search, Plus, Archive, Trash2, Pencil, ChevronDown, Filter, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Zap, Mic, Square, AlertCircle, MessageSquare, Send, Link as LinkIcon, ClipboardList, Plus } from 'lucide-react';
 import { io } from 'socket.io-client';
 import VoiceOrb from './components/VoiceOrb';
-import FileUpload from './components/FileUpload';
+
+// --- HELPER: TIME FORMATTER ---
+// This fixes the "Frozen" or "Invalid Date" issue
+const formatLocalTime = (msgId) => {
+  try {
+    // If msg.id is a timestamp (number), use it. Otherwise, use current time.
+    const date = typeof msgId === 'number' ? new Date(msgId) : new Date();
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch (e) {
+    return "--:--";
+  }
+};
 
 // Navigation Item Component
 const NavItem = ({ icon, label, active, onClick }) => (
@@ -29,39 +40,14 @@ const Sidebar = ({ activeTab, setActiveTab }) => (
     </div>
 
     <nav className="space-y-2">
-      <NavItem
-        icon={<MessageSquare />}
-        label="Dashboard"
-        active={activeTab === 'chat'}
-        onClick={() => setActiveTab('chat')}
-      />
-      <NavItem
-        icon={<AlertCircle />}
-        label="Issues"
-        active={activeTab === 'issues'}
-        onClick={() => setActiveTab('issues')}
-      />
-      <NavItem
-        icon={<LinkIcon />}
-        label="Connect Data"
-        active={activeTab === 'connect'}
-        onClick={() => setActiveTab('connect')}
-      />
-      <NavItem
-        icon={<Mic />}
-        label="Voice Command"
-        active={activeTab === 'voice'}
-        onClick={() => setActiveTab('voice')}
-      />
+      <NavItem icon={<MessageSquare />} label="Dashboard" active={activeTab === 'chat'} onClick={() => setActiveTab('chat')} />
+      <NavItem icon={<AlertCircle />} label="Issues" active={activeTab === 'issues'} onClick={() => setActiveTab('issues')} />
+      <NavItem icon={<LinkIcon />} label="Connect Data" active={activeTab === 'connect'} onClick={() => setActiveTab('connect')} />
+      <NavItem icon={<Mic />} label="Voice Command" active={activeTab === 'voice'} onClick={() => setActiveTab('voice')} />
     </nav>
 
     <div className="mt-auto space-y-4">
-      <NavItem
-        icon={<LayoutDashboard />}
-        label="Systems"
-        active={activeTab === 'dashboard'}
-        onClick={() => setActiveTab('dashboard')}
-      />
+      <NavItem icon={<LayoutDashboard />} label="Systems" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
       <div className="glass-card p-4">
         <p className="text-xs text-gray-400 uppercase font-semibold mb-2">System Status</p>
         <div className="flex items-center gap-2">
@@ -78,12 +64,8 @@ const ChatInterface = ({ messages, onSendMessage }) => {
   const [input, setInput] = React.useState('');
   const messagesEndRef = React.useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   React.useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSubmit = (e) => {
@@ -105,7 +87,7 @@ const ChatInterface = ({ messages, onSendMessage }) => {
                 }`}>
                 <p className="whitespace-pre-wrap">{msg.text}</p>
                 <span className="text-xs opacity-50 mt-2 block">
-                  {new Date(msg.id).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {formatLocalTime(msg.id)}
                 </span>
               </div>
             </div>
@@ -121,87 +103,11 @@ const ChatInterface = ({ messages, onSendMessage }) => {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask Empire AI..."
               className="glass-input flex-1"
-              autoFocus
             />
-            <button
-              type="submit"
-              disabled={!input.trim()}
-              className="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20"
-            >
+            <button type="submit" disabled={!input.trim()} className="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-lg transition-colors shadow-lg shadow-blue-600/20">
               <Send className="w-5 h-5" />
             </button>
           </form>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Issue Board Component
-const IssueBoard = ({ issues, addIssue }) => {
-  const handleAddIssue = () => {
-    const title = prompt("Enter issue title:");
-    if (title) addIssue(title);
-  };
-
-  const allIssues = [
-    {
-      id: 'demo-1',
-      title: 'New Drywall Crew',
-      description: 'Need to research and find a new drywall crew as a back up.',
-      department: 'Production & Project Management',
-      priority: 'Medium',
-      status: 'Open',
-      assignee: 'Bob Perry, Alex Duey',
-      date: '12/20/2025'
-    },
-    ...issues.map(i => ({
-      id: i.id,
-      title: i.title,
-      description: 'Pending details...',
-      department: 'Engineering',
-      priority: i.status === 'High Priority' ? 'High' : 'Low',
-      status: 'Open',
-      assignee: 'Unassigned',
-      date: i.date || new Date().toLocaleDateString()
-    }))
-  ];
-
-  return (
-    <div className="h-full flex flex-col space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-2xl font-bold flex items-center gap-3">
-            <ClipboardList className="w-8 h-8 text-blue-500" />
-            Issues Board
-          </h3>
-          <p className="text-sm text-gray-400 mt-1 ml-11">{allIssues.length} active issues</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button onClick={handleAddIssue} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors shadow-lg shadow-blue-600/20">
-            <Plus className="w-4 h-4" />
-            New Issue
-          </button>
-        </div>
-      </div>
-      <div className="flex-1 glass-panel overflow-hidden flex flex-col min-h-0 relative">
-        <div className="grid grid-cols-12 gap-4 p-5 border-b border-white/5 text-xs font-bold text-gray-500 uppercase tracking-wider bg-black/20">
-          <div className="col-span-4">Issue</div>
-          <div className="col-span-2">Department</div>
-          <div className="col-span-2">Priority</div>
-          <div className="col-span-2">Status</div>
-          <div className="col-span-2 text-right">Created</div>
-        </div>
-        <div className="overflow-y-auto flex-1 p-2 space-y-1">
-          {allIssues.map((issue) => (
-            <div key={issue.id} className="grid grid-cols-12 gap-4 p-4 rounded-lg bg-black/20 hover:bg-white/5 transition-colors items-center border border-transparent hover:border-white/5">
-              <div className="col-span-4"><h4 className="font-semibold text-gray-200 text-sm">{issue.title}</h4></div>
-              <div className="col-span-2 text-xs text-gray-400">{issue.department}</div>
-              <div className="col-span-2 text-xs text-gray-400">{issue.priority}</div>
-              <div className="col-span-2 text-xs text-gray-400">{issue.status}</div>
-              <div className="col-span-2 text-right text-xs text-gray-400">{issue.date}</div>
-            </div>
-          ))}
         </div>
       </div>
     </div>
@@ -212,88 +118,51 @@ const IssueBoard = ({ issues, addIssue }) => {
 function App() {
   const [activeTab, setActiveTab] = React.useState('chat');
   const [issues, setIssues] = React.useState([]);
-  const [documents, setDocuments] = React.useState([]);
   const [chatMessages, setChatMessages] = React.useState([]);
   const [voiceStatus, setVoiceStatus] = React.useState('idle');
   const [socket, setSocket] = React.useState(null);
   const [orbVolume, setOrbVolume] = React.useState(0);
   const [mediaRecorder, setMediaRecorder] = React.useState(null);
-  const [pulseData, setPulseData] = React.useState({ status: "Offline", version: "1.0.0" });
 
-  // SMART PATH LOGIC: Automatically detects if on Heroku or Local
-  const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
+  // SMART PATH LOGIC
+  const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3001' : window.location.origin;
 
-  // Initialize Socket (Voice Connection)
+  // Initialize Socket (Unified for Chat & Voice)
   React.useEffect(() => {
     const newSocket = io(API_BASE);
     setSocket(newSocket);
 
     newSocket.on('voice-volume', (data) => setOrbVolume(data.volume));
+    
+    // Listen for AI Responses (Text & Trigger Voice)
     newSocket.on('voice-response', (data) => {
       setVoiceStatus('idle');
-      setOrbVolume(0);
-      setChatMessages(prev => [...prev, { id: Date.now(), role: 'ai', text: data.text || "Audio Response" }]);
+      if (data.text) {
+        setChatMessages(prev => [...prev, { id: Date.now(), role: 'ai', text: data.text }]);
+      }
+    });
+
+    // Listen for Chat-only Responses
+    newSocket.on('chat-response', (data) => {
+      if (data.text) {
+        setChatMessages(prev => [...prev, { id: Date.now(), role: 'ai', text: data.text }]);
+      }
     });
 
     return () => newSocket.close();
-  }, []);
+  }, [API_BASE]);
 
-  // Fetch Initial Data
-  React.useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const pulseRes = await fetch(`${API_BASE}/api/pulse`);
-        setPulseData(await pulseRes.json());
-
-        const issuesRes = await fetch(`${API_BASE}/api/issues`);
-        setIssues(await issuesRes.json());
-
-        const docsRes = await fetch(`${API_BASE}/api/documents`);
-        setDocuments(await docsRes.json());
-
-        const chatRes = await fetch(`${API_BASE}/api/chat`);
-        const chatJson = await chatRes.json();
-        if (chatJson.length > 0) setChatMessages(chatJson);
-        else setChatMessages([{ id: Date.now(), role: 'ai', text: 'Hello, Architect. Connection to Central Intelligence established.' }]);
-      } catch (err) {
-        console.error("Link to Central Intelligence failed:", err);
-      }
-    };
-    fetchData();
-  }, []);
-
-  const handleSendMessage = async (text) => {
+  const handleSendMessage = (text) => {
     const userMsg = { id: Date.now(), role: 'user', text };
     setChatMessages(prev => [...prev, userMsg]);
-    try {
-      const res = await fetch(`${API_BASE}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text })
-      });
-      const data = await res.json();
-      setChatMessages(prev => [...prev, data]);
-    } catch (err) {
-      setChatMessages(prev => [...prev, { id: Date.now(), role: 'ai', text: "Error: Connection to Central Intelligence lost." }]);
+    if (socket) {
+      socket.emit('chat-message', text);
     }
-  };
-
-  const addIssue = async (title) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/issues`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title })
-      });
-      const newIssue = await res.json();
-      setIssues([...issues, newIssue]);
-    } catch (err) { console.error(err); }
   };
 
   const toggleVoice = async () => {
     if (voiceStatus === 'listening') {
       if (mediaRecorder) {
-        mediaRecorder.onstop = () => { if (socket) socket.emit('voice-end'); };
         mediaRecorder.stop();
         setMediaRecorder(null);
       }
@@ -305,7 +174,9 @@ function App() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       setMediaRecorder(recorder);
-      recorder.ondataavailable = (e) => { if (e.data.size > 0 && socket) socket.emit('voice-audio', e.data); };
+      recorder.ondataavailable = (e) => { 
+        if (e.data.size > 0 && socket) socket.emit('voice-audio', e.data); 
+      };
       recorder.start(100);
       setVoiceStatus('listening');
     } catch (err) { alert("Microphone Error"); }
@@ -322,17 +193,7 @@ function App() {
           </div>
         </header>
 
-        {activeTab === 'dashboard' && (
-          <section className="glass-panel p-6">
-            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2"><Zap className="text-yellow-400" /> System Pulse</h3>
-            <div className={`p-4 rounded-lg border ${pulseData.status === 'Online' ? 'bg-green-500/10 border-green-500/20 text-green-300' : 'bg-red-500/10 border-red-500/20 text-red-300'}`}>
-              System is {pulseData.status}. Link is {pulseData.status === 'Online' ? 'Solid' : 'Broken'}.
-            </div>
-          </section>
-        )}
-
         {activeTab === 'chat' && <ChatInterface messages={chatMessages} onSendMessage={handleSendMessage} />}
-        {activeTab === 'issues' && <IssueBoard issues={issues} addIssue={addIssue} />}
         
         {activeTab === 'voice' && (
           <section className="glass-panel p-12 flex flex-col items-center justify-center text-center h-[600px]">
