@@ -23,7 +23,7 @@ const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ 
     model: "gemini-2.0-flash-exp",
-    systemInstruction: "You are the Empire AI Dashboard, an operational intelligence tool for Empire Remodeling. You are a Senior Full-Stack AI Developer and Thought Partner. Your goal is to help the Project Owner manage documents, issues, and business intelligence. Be concise, professional, and insightful."
+    systemInstruction: "You are the Empire AI Dashboard, the operational intelligence core for Empire Remodeling. You are a Senior Full-Stack AI Thought Partner. Your role is to assist the Project Owner with business data, project management, and strategic insights. Be professional, direct, and helpful. You have a persistent memory via a connected database."
 });
 
 app.use(cors());
@@ -32,54 +32,61 @@ app.use(express.json());
 const frontendPath = path.join(__dirname, 'dist');
 app.use(express.static(frontendPath));
 
-// API Routes
-app.get('/api/pulse', (req, res) => res.json({ status: "Online", version: "1.2.0-Live", philosophy: "Intelligence through persistence." }));
+// --- API ROUTES ---
 
-// Get Chat History from Database
+// The Pulse
+app.get('/api/pulse', (req, res) => res.json({ 
+    status: "Online", 
+    version: "1.2.0-Live", 
+    philosophy: "Intelligence through persistence.",
+    details: "Neural engine connected and database sync active."
+}));
+
+// Fetch Chat History (Fixes "Invalid Date")
 app.get('/api/chat', async (req, res) => {
     try {
         const history = await ChatMessage.findAll({ limit: 50, order: [['createdAt', 'ASC']] });
         res.json(history.map(h => ({
-            id: h.id,
+            id: h.id || Date.now(),
             role: h.role,
             text: h.content,
-            createdAt: h.createdAt 
+            date: h.createdAt // Passing the actual timestamp
         })));
     } catch (e) { res.json([]); }
 });
 
-// Send New Chat Message
+// Chat Posting & Storage
 app.post('/api/chat', async (req, res) => {
     try {
         const { message } = req.body;
         
-        // Save User Message to DB
+        // 1. Save User Message to Database
         await ChatMessage.create({ role: 'user', content: message });
 
-        // Get AI Response
+        // 2. Get AI Response from Gemini
         const result = await model.generateContent(message);
         const aiResponse = result.response.text();
 
-        // Save AI Response to DB
+        // 3. Save AI Response to Database
         const savedAI = await ChatMessage.create({ role: 'ai', content: aiResponse });
 
         res.json({ 
             id: savedAI.id, 
             role: 'ai', 
             text: aiResponse,
-            createdAt: savedAI.createdAt 
+            date: savedAI.createdAt 
         });
     } catch (e) {
         res.status(500).json({ text: "AI Error: " + e.message });
     }
 });
 
-// Other API Placeholders
+// Issues & Data Source Placeholders
 app.get('/api/issues', async (req, res) => res.json(await Issue.findAll()));
 app.post('/api/issues', async (req, res) => res.json(await Issue.create(req.body)));
 app.get('/api/documents', async (req, res) => res.json(await DataSource.findAll()));
 
-// The Express 5 "Splat" Route
+// The Express 5 "Splat" Route (Crucial for Heroku)
 app.get('/{*splat}', (req, res) => {
     const indexPath = path.join(frontendPath, 'index.html');
     if (fsSync.existsSync(indexPath)) {
@@ -89,7 +96,7 @@ app.get('/{*splat}', (req, res) => {
     }
 });
 
-// Database Sync & Start
+// Database Handshake & Server Start
 sequelize.sync({ alter: true }).then(() => {
     server.listen(PORT, () => console.log(`Empire AI Engine Running on ${PORT}`));
 });
