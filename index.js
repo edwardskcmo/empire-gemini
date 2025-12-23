@@ -44,4 +44,5 @@ app.get('*', (req, res) => {
 
 sequelize.sync({ alter: true }).then(() => {
     server.listen(PORT, () => console.log(`Empire AI Engine Running on ${PORT}`));
-});
+});;
+
