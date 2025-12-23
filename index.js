@@ -38,7 +38,7 @@ app.post('/api/chat', async (req, res) => {
     }
 });
 
-app.get('*', (req, res) => {
+app.get('/{*splat}', (req, res) => {
     const indexPath = path.join(frontendPath, 'index.html');
     if (fsSync.existsSync(indexPath)) {
         res.sendFile(indexPath);
