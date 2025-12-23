@@ -1,4 +1,4 @@
-module.exports = (sequelize, DataTypes) => {
+export default (sequelize, DataTypes) => {
     const DataSource = sequelize.define('DataSource', {
         name: {
             type: DataTypes.STRING,
@@ -19,3 +19,4 @@ module.exports = (sequelize, DataTypes) => {
     });
     return DataSource;
 };
+
